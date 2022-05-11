@@ -16,10 +16,17 @@
     <ClInclude Include="tinyexpr\tinyexpr.h">
       <Filter>TinyExpr</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="TinyExpr">
       <UniqueIdentifier>{607bb232-29d2-4a66-9cd0-3288f91265ee}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="RadMeter.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RadMeter.rc" />
   </ItemGroup>
 </Project>

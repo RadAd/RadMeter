@@ -77,10 +77,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Format.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="tinyexpr\tinyexpr.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="Windowxx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="RadMeter.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RadMeter.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

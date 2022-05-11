@@ -11,6 +11,7 @@
 
 #include "tinyexpr/tinyexpr.h"
 #include "Format.h"
+#include "resource.h"
 
 template <class T> inline T K(T v) { return v * 1024; }
 template <class T> inline T M(T v) { return K(v) * 1024; }
@@ -43,6 +44,7 @@ protected:
         Window::GetWndClass(wc);
         //wc.hbrBackground = GetStockBrush(BLACK_BRUSH);
         wc.hbrBackground = CreateSolidBrush(RGB(24, 24, 24));
+        wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_RADMETER));
     }
 
     void OnPaint()
