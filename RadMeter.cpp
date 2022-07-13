@@ -17,6 +17,7 @@ template <class T> inline T K(T v) { return v * 1024; }
 template <class T> inline T M(T v) { return K(v) * 1024; }
 template <class T> inline T G(T v) { return M(v) * 1024; }
 
+#define METER_TIMER (5421)
 
 struct Message
 {
@@ -37,7 +38,7 @@ protected:
     {
         Window::GetCreateWindow(cs);
         cs.style = WS_POPUPWINDOW /*| WS_THICKFRAME*/;
-        cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW /*| WS_EX_LAYERED*/;
+        cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED;
     }
     static void GetWndClass(WNDCLASS& wc)
     {
@@ -123,12 +124,32 @@ protected:
 
 private:
     Message m_msg;
+    bool m_bHidden = false;
 };
+
+void AlphaFade(HWND hWnd, BYTE begin, BYTE end)
+{
+    const BYTE step = 15;
+    const DWORD sleep = 10;
+    if (begin > end)
+        for (BYTE b = begin; b > (end + step); b -= step)
+        {
+            SetLayeredWindowAttributes(hWnd, 0, b, LWA_ALPHA);
+            Sleep(sleep);
+        }
+    else
+        for (BYTE b = begin; b < (end - step); b += step)
+        {
+            SetLayeredWindowAttributes(hWnd, 0, b, LWA_ALPHA);
+            Sleep(sleep);
+        }
+    SetLayeredWindowAttributes(hWnd, 0, end, LWA_ALPHA);
+}
 
 void Widget::OnTimer(UINT id)
 {
     //Window::OnTimer(id);
-    if (id == 5421)
+    if (id == METER_TIMER)
     {
         RECT r;
         GetWindowRect(*this, &r);
@@ -138,7 +159,9 @@ void Widget::OnTimer(UINT id)
 
         if (!PtInRect(&r, pt))
         {
-            ShowWindow(*this, SW_SHOW);
+            //ShowWindow(*this, SW_SHOW);
+            AlphaFade(*this, 20, 255);
+            m_bHidden = false;
             KillTimer(*this, id);
         }
     }
@@ -146,10 +169,12 @@ void Widget::OnTimer(UINT id)
 
 void Widget::OnMouseMove(int x, int y, UINT keyFlags)
 {
-    if (!(GetKeyState(VK_CONTROL) & 0x8000))
+    if (!m_bHidden && !(GetKeyState(VK_CONTROL) & 0x8000))
     {
-        ShowWindow(*this, SW_HIDE);
-        SetTimer(*this, 5421, 1000, nullptr);
+        m_bHidden = true;
+        //ShowWindow(*this, SW_HIDE);
+        AlphaFade(*this, 255, 20);
+        SetTimer(*this, METER_TIMER, 1000, nullptr);
     }
 }
 
@@ -252,6 +277,8 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 {
     try
     {
+        SetLayeredWindowAttributes(*this, 0, 255, LWA_ALPHA);
+
         std::unique_ptr<HKEY, KeyDeleter> hKey;
         CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), ptr(hKey)), _T("RegOpenKey"));
 
