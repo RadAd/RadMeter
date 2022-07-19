@@ -13,11 +13,13 @@
 #include "Format.h"
 #include "resource.h"
 
+/* void Cls::OnMouseLeave() */
+#define HANDLEX_WM_MOUSELEAVE(wParam, lParam, fn) \
+    ((fn)(), 0L)
+
 template <class T> inline T K(T v) { return v * 1024; }
 template <class T> inline T M(T v) { return K(v) * 1024; }
 template <class T> inline T G(T v) { return M(v) * 1024; }
-
-#define METER_TIMER (5421)
 
 struct Message
 {
@@ -91,8 +93,8 @@ protected:
         DeleteDC(hdcBackBuffer);
 #endif
     }
-    void OnTimer(UINT id);
     void OnMouseMove(int x, int y, UINT keyFlags);
+    void OnMouseLeave();
     void OnLButtonDown(int x, int y, UINT keyFlags);
     void OnRButtonDown(int x, int y, UINT keyFlags);
     void OnSysCommand(UINT cmd, int x, int y)
@@ -111,8 +113,8 @@ protected:
             //HANDLE_MSG(WM_PAINT, OnPaint);
         case (WM_PAINT):
             return HANDLEX_WM_PAINT((wParam), (lParam), (OnPaint));
-            HANDLE_MSG(WM_TIMER, OnTimer);
             HANDLE_MSG(WM_MOUSEMOVE, OnMouseMove);
+            HANDLE_MSG(WM_MOUSELEAVE, OnMouseLeave);
             HANDLE_MSG(WM_LBUTTONDOWN, OnLButtonDown);
             HANDLE_MSG(WM_RBUTTONDOWN, OnRButtonDown);
             HANDLE_MSG(WM_SYSCOMMAND, OnSysCommand);
@@ -146,25 +148,11 @@ void AlphaFade(HWND hWnd, BYTE begin, BYTE end)
     SetLayeredWindowAttributes(hWnd, 0, end, LWA_ALPHA);
 }
 
-void Widget::OnTimer(UINT id)
+void Widget::OnMouseLeave()
 {
-    //Window::OnTimer(id);
-    if (id == METER_TIMER)
-    {
-        RECT r;
-        GetWindowRect(*this, &r);
-
-        POINT pt;
-        GetCursorPos(&pt);
-
-        if (!PtInRect(&r, pt))
-        {
-            //ShowWindow(*this, SW_SHOW);
-            AlphaFade(*this, 20, 255);
-            m_bHidden = false;
-            KillTimer(*this, id);
-        }
-    }
+    //ShowWindow(*this, SW_SHOW);
+    AlphaFade(*this, 20, 255);
+    m_bHidden = false;
 }
 
 void Widget::OnMouseMove(int x, int y, UINT keyFlags)
@@ -174,7 +162,11 @@ void Widget::OnMouseMove(int x, int y, UINT keyFlags)
         m_bHidden = true;
         //ShowWindow(*this, SW_HIDE);
         AlphaFade(*this, 255, 20);
-        SetTimer(*this, METER_TIMER, 1000, nullptr);
+
+        TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT) };
+        tme.hwndTrack = *this;
+        tme.dwFlags = TME_LEAVE;
+        TrackMouseEvent(&tme);
     }
 }
 
@@ -378,7 +370,7 @@ void RadMeter::OnDestroy()
 
 void RadMeter::OnTimer(UINT id)
 {
-    Widget::OnTimer(id);
+    //Widget::OnTimer(id);
 
     if (id == 1)
     {
