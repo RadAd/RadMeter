@@ -44,6 +44,9 @@
     <Link>
       <AdditionalDependencies>pdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DATE_VERSION_COMMA=$([System.DateTime]::Now.ToString(`yyyy,MM,dd`));_DATE_VERSION_DOTS=$([System.DateTime]::Now.ToString(`yyyy.MM.dd`));%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -52,6 +55,9 @@
     <Link>
       <AdditionalDependencies>pdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DATE_VERSION_COMMA=$([System.DateTime]::Now.ToString(`yyyy,MM,dd`));_DATE_VERSION_DOTS=$([System.DateTime]::Now.ToString(`yyyy.MM.dd`));%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -60,6 +66,9 @@
     <Link>
       <AdditionalDependencies>pdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DATE_VERSION_COMMA=$([System.DateTime]::Now.ToString(`yyyy,MM,dd`));_DATE_VERSION_DOTS=$([System.DateTime]::Now.ToString(`yyyy.MM.dd`));%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -68,6 +77,9 @@
     <Link>
       <AdditionalDependencies>pdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DATE_VERSION_COMMA=$([System.DateTime]::Now.ToString(`yyyy,MM,dd`));_DATE_VERSION_DOTS=$([System.DateTime]::Now.ToString(`yyyy.MM.dd`));%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="RadMeter.cpp" />
