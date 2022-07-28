@@ -17,6 +17,20 @@
 #define HANDLEX_WM_MOUSELEAVE(wParam, lParam, fn) \
     ((fn)(), 0L)
 
+enum TIMER
+{
+    TIMER_UPDATE,
+    TIMER_HIDE,
+};
+
+inline void ChangeWindowLong(HWND hWnd, int nIndex, LONG add, LONG remove)
+{
+    LONG exstyle = GetWindowLong(hWnd, nIndex);
+    exstyle |= add;
+    exstyle &= ~remove;
+    SetWindowLong(hWnd, nIndex, exstyle);
+}
+
 template <class T> inline T K(T v) { return v * 1024; }
 template <class T> inline T M(T v) { return K(v) * 1024; }
 template <class T> inline T G(T v) { return M(v) * 1024; }
@@ -150,7 +164,7 @@ void AlphaFade(HWND hWnd, BYTE begin, BYTE end)
 
 void Widget::OnMouseLeave()
 {
-    //ShowWindow(*this, SW_SHOW);
+    //ChangeWindowLong(*this, GWL_EXSTYLE, 0, WS_EX_TRANSPARENT);
     AlphaFade(*this, 20, 255);
     m_bHidden = false;
 }
@@ -160,8 +174,8 @@ void Widget::OnMouseMove(int x, int y, UINT keyFlags)
     if (!m_bHidden && !(GetKeyState(VK_CONTROL) & 0x8000))
     {
         m_bHidden = true;
-        //ShowWindow(*this, SW_HIDE);
         AlphaFade(*this, 255, 20);
+        //ChangeWindowLong(*this, GWL_EXSTYLE, WS_EX_TRANSPARENT, 0);
 
         TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT) };
         tme.hwndTrack = *this;
@@ -203,6 +217,11 @@ void Widget::OnRButtonDown(int x, int y, UINT keyFlags)
 #else
         SendMessage(*this, WM_SYSCOMMAND, SC_MOUSEMENU, 0);
 #endif
+    else
+    {
+        ShowWindow(*this, SW_HIDE);
+        SetTimer(*this, TIMER_HIDE, 500, nullptr);
+    }
 }
 
 struct Measure
@@ -353,7 +372,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
         DoPosition();
 
-        SetTimer(*this, 1, 1000, nullptr);
+        SetTimer(*this, TIMER_UPDATE, 1000, nullptr);
     }
     catch (const WinError& e)
     {
@@ -372,7 +391,9 @@ void RadMeter::OnTimer(UINT id)
 {
     //Widget::OnTimer(id);
 
-    if (id == 1)
+    switch (id)
+    {
+    case TIMER_UPDATE:
     {
         CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), _T("PdhCollectQueryData"));
 
@@ -423,6 +444,24 @@ void RadMeter::OnTimer(UINT id)
         }
 
         InvalidateRect(*this, nullptr, TRUE);
+    }
+    break;
+
+    case TIMER_HIDE:
+    {
+        RECT r;
+        GetWindowRect(*this, &r);
+
+        POINT pt;
+        GetCursorPos(&pt);
+
+        if (!PtInRect(&r, pt))
+        {
+            ShowWindow(*this, SW_SHOW);
+            KillTimer(*this, TIMER_HIDE);
+        }
+    }
+    break;
     }
 }
 
