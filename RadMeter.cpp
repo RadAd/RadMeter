@@ -384,6 +384,8 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
 void RadMeter::OnDestroy()
 {
+    DeleteFont(m_hFont);
+    m_hFont = NULL;
     PostQuitMessage(0);
 }
 
