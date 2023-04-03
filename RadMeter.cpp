@@ -13,10 +13,6 @@
 #include "Format.h"
 #include "resource.h"
 
-/* void Cls::OnMouseLeave() */
-#define HANDLEX_WM_MOUSELEAVE(wParam, lParam, fn) \
-    ((fn)(), 0L)
-
 enum TIMER
 {
     TIMER_UPDATE,
@@ -54,7 +50,7 @@ protected:
     {
         Window::GetCreateWindow(cs);
         cs.style = WS_POPUPWINDOW /*| WS_THICKFRAME*/;
-        cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED;
+        cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
     }
     static void GetWndClass(WNDCLASS& wc)
     {
@@ -64,57 +60,14 @@ protected:
         wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_RADMETER));
     }
 
-    void OnPaint()
-    {
-#if 1
-        PAINTSTRUCT ps;
-        BeginPaint(*this, &ps);
-        OnDraw(&ps);
-        EndPaint(*this, &ps);
-#else
-        RECT r;
-        GetClientRect(*this, &r);
-        // TODO Need to get size
-        const int margin = 5;
-        r.right = 100 + 2 * margin;
-        r.bottom = /*m_hCounters.size()*/ 7 * (50 + margin) + margin;
-        HDC hdcScreen = GetDC(NULL);
-        HDC hdcBackBuffer = CreateCompatibleDC(hdcScreen);
-        HBITMAP hbmBackBuffer = CreateCompatibleBitmap(hdcScreen, Width(r), Height(r));
-        HGDIOBJ hbmOld = SelectObject(hdcBackBuffer, hbmBackBuffer);
-
-        PAINTSTRUCT ps = {};
-        //BeginPaint(*this, &ps);
-        ps.hdc = hdcBackBuffer;
-        OnDraw(&ps);
-        //EndPaint(*this, &ps);
-
-        // inform Windows that we have new graphics data available.
-        POINT ptSrc;
-        ptSrc.x = 0;
-        ptSrc.y = 0;
-        SIZE size;
-        size.cx = Width(r);
-        size.cy = Height(r);
-        BLENDFUNCTION bf;
-        bf.AlphaFormat = AC_SRC_ALPHA;
-        bf.SourceConstantAlpha = 255;
-        bf.BlendFlags = 0;
-        bf.BlendOp = AC_SRC_OVER;
-        UpdateLayeredWindow(*this, NULL, NULL, &size, hdcBackBuffer, &ptSrc, 0, &bf, ULW_ALPHA);
-
-        SelectObject(hdcBackBuffer, hbmOld);
-        DeleteDC(hdcBackBuffer);
-#endif
-    }
     void OnMouseMove(int x, int y, UINT keyFlags);
-    void OnMouseLeave();
     void OnLButtonDown(int x, int y, UINT keyFlags);
     void OnRButtonDown(int x, int y, UINT keyFlags);
     void OnSysCommand(UINT cmd, int x, int y)
     {
         Window::HandleMessage(m_msg.m_message, m_msg.m_wParam, m_msg.m_lParam);
     }
+    void OnTimer(UINT id);
 
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override
     {
@@ -124,14 +77,11 @@ protected:
 
         switch (uMsg)
         {
-            //HANDLE_MSG(WM_PAINT, OnPaint);
-        case (WM_PAINT):
-            return HANDLEX_WM_PAINT((wParam), (lParam), (OnPaint));
             HANDLE_MSG(WM_MOUSEMOVE, OnMouseMove);
-            HANDLE_MSG(WM_MOUSELEAVE, OnMouseLeave);
             HANDLE_MSG(WM_LBUTTONDOWN, OnLButtonDown);
             HANDLE_MSG(WM_RBUTTONDOWN, OnRButtonDown);
             HANDLE_MSG(WM_SYSCOMMAND, OnSysCommand);
+            HANDLE_MSG(WM_TIMER, OnTimer);
             HANDLE_DEF(Window::HandleMessage);
         }
     }
@@ -143,44 +93,13 @@ private:
     bool m_bHidden = false;
 };
 
-void AlphaFade(HWND hWnd, BYTE begin, BYTE end)
-{
-    const BYTE step = 15;
-    const DWORD sleep = 10;
-    if (begin > end)
-        for (BYTE b = begin; b > (end + step); b -= step)
-        {
-            SetLayeredWindowAttributes(hWnd, 0, b, LWA_ALPHA);
-            Sleep(sleep);
-        }
-    else
-        for (BYTE b = begin; b < (end - step); b += step)
-        {
-            SetLayeredWindowAttributes(hWnd, 0, b, LWA_ALPHA);
-            Sleep(sleep);
-        }
-    SetLayeredWindowAttributes(hWnd, 0, end, LWA_ALPHA);
-}
-
-void Widget::OnMouseLeave()
-{
-    //ChangeWindowLong(*this, GWL_EXSTYLE, 0, WS_EX_TRANSPARENT);
-    AlphaFade(*this, 20, 255);
-    m_bHidden = false;
-}
-
 void Widget::OnMouseMove(int x, int y, UINT keyFlags)
 {
     if (!m_bHidden && !(GetKeyState(VK_CONTROL) & 0x8000))
     {
         m_bHidden = true;
-        AlphaFade(*this, 255, 20);
-        //ChangeWindowLong(*this, GWL_EXSTYLE, WS_EX_TRANSPARENT, 0);
-
-        TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT) };
-        tme.hwndTrack = *this;
-        tme.dwFlags = TME_LEAVE;
-        TrackMouseEvent(&tme);
+        AnimateWindow(*this, 300, AW_HIDE | AW_HOR_POSITIVE | AW_BLEND);
+        SetTimer(*this, TIMER_HIDE, 500, nullptr);
     }
 }
 
@@ -217,10 +136,28 @@ void Widget::OnRButtonDown(int x, int y, UINT keyFlags)
 #else
         SendMessage(*this, WM_SYSCOMMAND, SC_MOUSEMENU, 0);
 #endif
-    else
+}
+
+void Widget::OnTimer(UINT id)
+{
+    switch (id)
     {
-        ShowWindow(*this, SW_HIDE);
-        SetTimer(*this, TIMER_HIDE, 500, nullptr);
+    case TIMER_HIDE:
+    {
+        RECT r;
+        GetWindowRect(*this, &r);
+
+        POINT pt;
+        GetCursorPos(&pt);
+
+        if (!PtInRect(&r, pt))
+        {
+            m_bHidden = false;
+            AnimateWindow(*this, 300, AW_HOR_NEGATIVE | AW_BLEND);
+            KillTimer(*this, TIMER_HIDE);
+        }
+    }
+    break;
     }
 }
 
@@ -265,7 +202,6 @@ private:
     void OnDestroy();
     void OnTimer(UINT id);
     void OnDisplayChange(UINT bitsPerPixel, UINT cxScreen, UINT cyScreen);
-    void OnSysCommand(UINT cmd, int x, int y);
 
     virtual void OnDraw(const PAINTSTRUCT* pps) const override;
 
@@ -288,8 +224,6 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 {
     try
     {
-        SetLayeredWindowAttributes(*this, 0, 255, LWA_ALPHA);
-
         std::unique_ptr<HKEY, KeyDeleter> hKey;
         CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), ptr(hKey)), _T("RegOpenKey"));
 
@@ -344,29 +278,30 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
             m_hCounters.push_back(CounterInstance({ counter, hCounter }));
         }
 
-#if 0
-        const Counter counters[] = {
-            { _T("CPU"),       _T("\\Processor(_Total)\\% Processor Time"),        _T(""),  PDH_FMT_DOUBLE, RGB(17, 125, 187) },
-            { _T("Processes"), _T("\\System\\Processes"),                          _T(""),  PDH_FMT_LONG,   MakeLighter(RGB(17, 125, 187), 0.3f), {}, 500 },
-            { _T("Memory"),    _T("\\Memory\\Available Bytes"),                    _T("B"), PDH_FMT_DOUBLE, RGB(139, 18, 174),  {}, G(16.0) },
-            { _T("Disk"),      _T("\\PhysicalDisk(_Total)\\% Disk Time"),          _T(""),  PDH_FMT_DOUBLE, RGB(77, 166, 12) },
-            { _T("Net D"),     _T("\\Network Interface(*)\\Bytes Received/sec"),   _T("B"), PDH_FMT_DOUBLE, RGB(167, 79, 1),    {}, 2000, true },
-            { _T("Net U"),     _T("\\Network Interface(*)\\Bytes Sent/sec"),       _T("B"), PDH_FMT_DOUBLE, RGB(237, 165, 130), {}, 2000, true },
-            { _T("GPU"),       _T("\\GPU Engine(*)\\Utilization Percentage"),      _T(""),  PDH_FMT_DOUBLE, RGB(172, 57, 49) },
-        };
-        for (Counter c : counters)
+        if (m_hCounters.empty())
         {
-            if (c.m_BrushColor == COLORREF{})
-                c.m_BrushColor = MakeDarker(c.m_PenColor, 0.5f);
-            if (c.MaxValue == 0)
-                c.MaxValue = 100;
+            const Counter counters[] = {
+                { _T("CPU"),       _T("\\Processor(_Total)\\% Processor Time"),        _T(""),  PDH_FMT_DOUBLE, RGB(17, 125, 187) },
+                { _T("Processes"), _T("\\System\\Processes"),                          _T(""),  PDH_FMT_LONG,   MakeLighter(RGB(17, 125, 187), 0.3f), {}, 500 },
+                { _T("Memory"),    _T("\\Memory\\Available Bytes"),                    _T("B"), PDH_FMT_DOUBLE, RGB(139, 18, 174),  {}, G(16.0) },
+                { _T("Disk"),      _T("\\PhysicalDisk(_Total)\\% Disk Time"),          _T(""),  PDH_FMT_DOUBLE, RGB(77, 166, 12) },
+                { _T("Net D"),     _T("\\Network Interface(*)\\Bytes Received/sec"),   _T("B"), PDH_FMT_DOUBLE, RGB(167, 79, 1),    {}, 2000, true },
+                { _T("Net U"),     _T("\\Network Interface(*)\\Bytes Sent/sec"),       _T("B"), PDH_FMT_DOUBLE, RGB(237, 165, 130), {}, 2000, true },
+                { _T("GPU"),       _T("\\GPU Engine(*)\\Utilization Percentage"),      _T(""),  PDH_FMT_DOUBLE, RGB(172, 57, 49) },
+            };
+            for (Counter c : counters)
+            {
+                if (c.m_BrushColor == COLORREF{})
+                    c.m_BrushColor = MakeDarker(c.m_PenColor, 0.5f);
+                if (c.MaxValue == 0)
+                    c.MaxValue = 100;
 
-            PDH_HCOUNTER hCounter = NULL;
-            CheckPdhThrow(PdhAddEnglishCounter(m_hQuery.get(), c.szCounter, 0, &hCounter));
+                PDH_HCOUNTER hCounter = NULL;
+                CheckPdhThrow(PdhAddEnglishCounter(m_hQuery.get(), c.szCounter, 0, &hCounter));
 
-            m_hCounters.push_back(CounterInstance({ c, hCounter }));
+                m_hCounters.push_back(CounterInstance({ c, hCounter }));
+            }
         }
-#endif
 
         CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), _T("PdhCollectQueryData"));
 
@@ -449,21 +384,9 @@ void RadMeter::OnTimer(UINT id)
     }
     break;
 
-    case TIMER_HIDE:
-    {
-        RECT r;
-        GetWindowRect(*this, &r);
-
-        POINT pt;
-        GetCursorPos(&pt);
-
-        if (!PtInRect(&r, pt))
-        {
-            ShowWindow(*this, SW_SHOW);
-            KillTimer(*this, TIMER_HIDE);
-        }
-    }
-    break;
+    default:
+        Widget::OnTimer(id);
+        break;
     }
 }
 
