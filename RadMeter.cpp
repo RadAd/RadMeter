@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <stack>
 #include <PdhMsg.h>
 
 #include "tinyexpr/tinyexpr.h"
@@ -30,13 +31,6 @@ inline void ChangeWindowLong(HWND hWnd, int nIndex, LONG add, LONG remove)
 template <class T> inline T K(T v) { return v * 1024; }
 template <class T> inline T M(T v) { return K(v) * 1024; }
 template <class T> inline T G(T v) { return M(v) * 1024; }
-
-struct Message
-{
-    UINT        m_message;
-    WPARAM      m_wParam;
-    LPARAM      m_lParam;
-};
 
 class Widget : public Window
 {
@@ -63,33 +57,28 @@ protected:
     void OnMouseMove(int x, int y, UINT keyFlags);
     void OnLButtonDown(int x, int y, UINT keyFlags);
     void OnRButtonDown(int x, int y, UINT keyFlags);
-    void OnSysCommand(UINT cmd, int x, int y)
-    {
-        Window::HandleMessage(m_msg.m_message, m_msg.m_wParam, m_msg.m_lParam);
-    }
     void OnTimer(UINT id);
 
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override
     {
-        m_msg.m_message = uMsg;
-        m_msg.m_wParam = wParam;
-        m_msg.m_lParam = lParam;
-
+        LRESULT ret = 0;
         switch (uMsg)
         {
             HANDLE_MSG(WM_MOUSEMOVE, OnMouseMove);
             HANDLE_MSG(WM_LBUTTONDOWN, OnLButtonDown);
             HANDLE_MSG(WM_RBUTTONDOWN, OnRButtonDown);
-            HANDLE_MSG(WM_SYSCOMMAND, OnSysCommand);
             HANDLE_MSG(WM_TIMER, OnTimer);
-            HANDLE_DEF(Window::HandleMessage);
         }
+
+        if (!IsHandled())
+            ret = Window::HandleMessage(uMsg, wParam, lParam);
+
+        return ret;
     }
 
     static LPCTSTR ClassName() { return TEXT("RadWidget"); }
 
 private:
-    Message m_msg;
     bool m_bHidden = false;
 };
 
@@ -225,7 +214,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
     try
     {
         std::unique_ptr<HKEY, KeyDeleter> hKey;
-        CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), ptr(hKey)), _T("RegOpenKey"));
+        CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
 
         HDC hDC = GetDC(*this);
         LOGFONT lf = {};
@@ -239,10 +228,10 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
         m_Margin = RegGetDWORD(hKey.get(), _T("Margin"), 5);
 
-        CheckPdhThrow(PdhOpenQuery(nullptr, 0, ptr(m_hQuery)));
+        CheckPdhThrow(PdhOpenQuery(nullptr, 0, out_ptr(m_hQuery)));
 
         std::unique_ptr<HKEY, KeyDeleter> hKeyMeter;
-        CheckLog(RegOpenKey(hKey.get(), _T("Meters"), ptr(hKeyMeter)), _T("RegOpenKey"));
+        CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
 
         TCHAR Order[1024] = _T("CPU\0");
         RegGetMULTISZ(hKeyMeter.get(), _T("Order"), Order, ARRAYSIZE(Order));
@@ -251,7 +240,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
         {
             OutputDebugString(lpMeter);
             std::unique_ptr<HKEY, KeyDeleter> hKeyCurrentMeter;
-            CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, ptr(hKeyCurrentMeter)), _T("RegOpenKey"));
+            CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)), _T("RegOpenKey"));
 
             Counter counter = { _T(""), _T("\\Processor(_Total)\\% Processor Time"), _T(""), PDH_FMT_DOUBLE, RGB(17, 125, 187), {}, 100 };
 
@@ -326,8 +315,6 @@ void RadMeter::OnDestroy()
 
 void RadMeter::OnTimer(UINT id)
 {
-    //Widget::OnTimer(id);
-
     switch (id)
     {
     case TIMER_UPDATE:
@@ -383,10 +370,6 @@ void RadMeter::OnTimer(UINT id)
         InvalidateRect(*this, nullptr, TRUE);
     }
     break;
-
-    default:
-        Widget::OnTimer(id);
-        break;
     }
 }
 
@@ -399,10 +382,10 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
 {
     HDC hDC = pps->hdc;
 
-    HPEN hOldPen = (HPEN) SelectObject(hDC, GetStockObject(DC_PEN));
-    HBRUSH hOldBrush = (HBRUSH) SelectObject(hDC, GetStockObject(DC_BRUSH));
+    HPEN hOldPen = SelectPen(hDC, GetStockPen(DC_PEN));
+    HBRUSH hOldBrush = SelectBrush(hDC, GetStockBrush(DC_BRUSH));
 
-    HFONT hOldFont = (HFONT) SelectObject(hDC, m_hFont);
+    HFONT hOldFont = SelectFont(hDC, m_hFont);
     SetBkMode(hDC, TRANSPARENT);
     SetTextColor(hDC, RGB(255, 255, 255));
 
@@ -418,10 +401,10 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
     for (const CounterInstance& counter : m_hCounters)
     {
         SetDCPenColor(hDC, counter.style.m_PenColor);
-        SelectObject(hDC, GetStockObject(NULL_BRUSH));
+        SelectBrush(hDC, GetStockBrush(NULL_BRUSH));
         Rectangle(hDC, rchart.left, rchart.top, rchart.right, rchart.bottom);
 
-        SelectObject(hDC, GetStockObject(DC_BRUSH));
+        SelectBrush(hDC, GetStockBrush(DC_BRUSH));
         SetDCBrushColor(hDC, counter.style.m_BrushColor);
 
         std::vector<POINT> points;
@@ -510,13 +493,14 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
         OffsetRect(&rchart, 0, height);
     }
 
-    SelectObject(hDC, hOldPen);
-    SelectObject(hDC, hOldBrush);
-    SelectObject(hDC, hOldFont);
+    SelectPen(hDC, hOldPen);
+    SelectBrush(hDC, hOldBrush);
+    SelectFont(hDC, hOldFont);
 }
 
 LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
+    LRESULT ret = 0;
     switch (uMsg)
     {
         HANDLE_MSG(WM_CREATE, OnCreate);
@@ -524,17 +508,21 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
         //HANDLE_MSG(WM_SIZE, OnSize);
         HANDLE_MSG(WM_TIMER, OnTimer);
         HANDLE_MSG(WM_DISPLAYCHANGE, OnDisplayChange);
-        HANDLE_DEF(Widget::HandleMessage);
     }
+
+    if (!IsHandled())
+        ret = Widget::HandleMessage(uMsg, wParam, lParam);
+
+    return ret;
 }
 
 void RadMeter::DoPosition()
 {
     std::unique_ptr<HKEY, KeyDeleter> hKey;
-    CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), ptr(hKey)), _T("RegOpenKey"));
+    CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
 
     std::unique_ptr<HKEY, KeyDeleter> hKeyMeter;
-    CheckLog(RegOpenKey(hKey.get(), _T("Meters"), ptr(hKeyMeter)), _T("RegOpenKey"));
+    CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
 
     const LONG style = GetWindowLong(*this, GWL_STYLE);
     const LONG exstyle = GetWindowLong(*this, GWL_EXSTYLE);

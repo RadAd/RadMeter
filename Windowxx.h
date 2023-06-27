@@ -3,9 +3,7 @@
 #include <windowsx.h>
 
 #undef HANDLE_MSG
-#define HANDLE_MSG(message, fn)        case (message): return HANDLEX_##message((wParam), (lParam), (fn))
-
-#define HANDLE_DEF(fn)                 default: return (fn)(uMsg, wParam, lParam);
+#define HANDLE_MSG(message, fn)        case (message): ret = HANDLEX_##message((wParam), (lParam), (fn)); break
 
 /* void Cls::OnCompacting(UINT compactRatio) */
 #define HANDLEX_WM_COMPACTING(wParam, lParam, fn) \

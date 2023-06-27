@@ -1,5 +1,6 @@
 #include "Window.h"
 #include <cassert>
+#include <algorithm>
 
 extern HINSTANCE g_hInstance;
 
@@ -33,6 +34,21 @@ void Window::GetWndClass(WNDCLASS& wc)
     wc.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
 }
 
+LRESULT Window::ProcessMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Message m ={ uMsg, wParam, lParam, false };
+    Message* pMsg = &m;
+    std::swap(pMsg, m_msg);
+
+    const LRESULT ret = HandleMessage(uMsg, wParam, lParam);
+
+    assert(IsHandled());
+    assert(m_msg == &m);
+    std::swap(pMsg, m_msg);
+
+    return ret;
+}
+
 LRESULT CALLBACK Window::s_WndProc(const HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     Window* self = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
@@ -53,14 +69,18 @@ LRESULT CALLBACK Window::s_WndProc(const HWND hWnd, const UINT uMsg, const WPARA
     }
 
     LRESULT ret = self != nullptr
-        ? self->HandleMessage(uMsg, wParam, lParam)
+        ? self->ProcessMessage(uMsg, wParam, lParam)
         : DefWindowProc(hWnd, uMsg, wParam, lParam);
 
     if (uMsg == WM_NCDESTROY)
     {
         assert(self != nullptr);
-        self->m_hWnd = NULL;
         SetWindowLongPtr(hWnd, GWLP_USERDATA, 0);
+    }
+
+    if (self != nullptr && GetWindowLongPtr(hWnd, GWLP_USERDATA) == 0 && self->m_msg == nullptr)
+    {
+        self->m_hWnd = NULL;
         delete self;
     }
 
@@ -69,6 +89,7 @@ LRESULT CALLBACK Window::s_WndProc(const HWND hWnd, const UINT uMsg, const WPARA
 
 LRESULT Window::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
+    SetHandled(true);
     switch (uMsg)
     {
     case WM_PAINT:

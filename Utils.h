@@ -38,12 +38,12 @@ struct KeyDeleter
 };
 
 template <class T>
-class ptr
+class out_ptr
 {
 public:
     typedef typename T::pointer pointer;
 
-    ptr(T& t)
+    out_ptr(T& t)
         : tt(t)
     {
     }
@@ -58,7 +58,7 @@ public:
         return &pp;
     }
 
-    ~ptr()
+    ~out_ptr()
     {
         tt.reset(pp);
     }
@@ -84,7 +84,7 @@ struct WinError
             hLibrary,
             dwError,
             0,
-            (LPTSTR) ptr(pMessage).get(),
+            (LPTSTR) out_ptr(pMessage).get(),
             0,
             NULL))
         {
