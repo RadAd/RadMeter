@@ -14,6 +14,8 @@
 #include "Format.h"
 #include "resource.h"
 
+const UINT WM_SHELLHOOKMESSAGE = RegisterWindowMessage(TEXT("SHELLHOOK"));
+
 enum TIMER
 {
     TIMER_UPDATE,
@@ -196,6 +198,8 @@ private:
 
     void DoPosition();
 
+    int m_nFullScreenCount = 0;
+
     HFONT m_hFont;
     LONG m_Margin;
 
@@ -215,6 +219,8 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
     {
         std::unique_ptr<HKEY, KeyDeleter> hKey;
         CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
+
+        CheckLog(RegisterShellHookWindow(*this), _T("RegisterShellHookWindow"));
 
         HDC hDC = GetDC(*this);
         LOGFONT lf = {};
@@ -308,6 +314,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
 void RadMeter::OnDestroy()
 {
+    CheckLog(DeregisterShellHookWindow(*this), _T("DeregisterShellHookWindow"));
     DeleteFont(m_hFont);
     m_hFont = NULL;
     PostQuitMessage(0);
@@ -508,6 +515,23 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
         //HANDLE_MSG(WM_SIZE, OnSize);
         HANDLE_MSG(WM_TIMER, OnTimer);
         HANDLE_MSG(WM_DISPLAYCHANGE, OnDisplayChange);
+    }
+
+    if (uMsg == WM_SHELLHOOKMESSAGE)
+    {
+        switch (wParam)
+        {
+        case 53:    // Undocumented on fullscreen enter
+            ++m_nFullScreenCount;
+            if (m_nFullScreenCount > 0)
+                CheckLog(SetWindowPos(*this, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), _T("SetWindowPos HWND_NOTOPMOST"));
+            break;
+        case 54:    // Undocumented on fullscreen exit
+            --m_nFullScreenCount;
+            if (m_nFullScreenCount <= 0)
+                CheckLog(SetWindowPos(*this, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), _T("SetWindowPos HWND_TOPMOST"));
+            break;
+        }
     }
 
     if (!IsHandled())
