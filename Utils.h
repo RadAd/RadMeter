@@ -5,7 +5,7 @@
 #include <tchar.h>
 #include <cmath>
 
-#include "Format.h"
+#include "Rad/Format.h"
 
 struct QueryDeleter
 {

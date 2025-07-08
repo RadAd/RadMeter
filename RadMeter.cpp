@@ -1,5 +1,5 @@
-#include "Window.h"
-#include "Windowxx.h"
+#include "Rad/Window.h"
+#include "Rad/Windowxx.h"
 //#include <tchar.h>
 
 #include "Utils.h"
@@ -11,7 +11,7 @@
 #include <PdhMsg.h>
 
 #include "tinyexpr/tinyexpr.h"
-#include "Format.h"
+#include "Rad/Format.h"
 #include "resource.h"
 
 double te_interp_var(const char* expression, const te_variable* variables, int var_count, int* error) {

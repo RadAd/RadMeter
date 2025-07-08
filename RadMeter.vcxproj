@@ -83,17 +83,29 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="RadMeter.cpp" />
+    <ClCompile Include="Rad\Dialog.cpp" />
+    <ClCompile Include="Rad\Log.cpp" />
+    <ClCompile Include="Rad\MessageHandler.cpp" />
+    <ClCompile Include="Rad\Window.cpp" />
+    <ClCompile Include="Rad\WinError.cpp" />
     <ClCompile Include="tinyexpr\tinyexpr.c" />
-    <ClCompile Include="Window.cpp" />
     <ClCompile Include="WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Format.h" />
+    <ClInclude Include="Rad\Convert.h" />
+    <ClInclude Include="Rad\Dialog.h" />
+    <ClInclude Include="Rad\Format.h" />
+    <ClInclude Include="Rad\Log.h" />
+    <ClInclude Include="Rad\MemoryPlus.h" />
+    <ClInclude Include="Rad\MessageHandler.h" />
+    <ClInclude Include="Rad\NewDebug.h" />
+    <ClInclude Include="Rad\SourceLocation.h" />
+    <ClInclude Include="Rad\Window.h" />
+    <ClInclude Include="Rad\Windowxx.h" />
+    <ClInclude Include="Rad\WinError.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="tinyexpr\tinyexpr.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="Window.h" />
-    <ClInclude Include="Windowxx.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="RadMeter.ico" />
