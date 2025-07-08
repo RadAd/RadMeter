@@ -1,10 +1,8 @@
 #pragma once
 #include <Windows.h>
 #include <pdh.h>
-#include <tchar.h>
 #include <cmath>
 
-#include "Rad/Format.h"
 #include "Rad/WinError.h"
 
 inline DWORD CheckThrow(DWORD status, LPCTSTR szModule = nullptr)
@@ -19,19 +17,19 @@ inline DWORD CheckLog(DWORD status, const std::wstring& context, LPCTSTR szModul
     if (FAILED(status))
     {
         WinError e({ status, szModule });
-        OutputDebugString((context + _T(": ") + e.getMessage() + _T('\n')).c_str());
+        OutputDebugString((context + TEXT(": ") + e.getMessage() + TEXT('\n')).c_str());
     }
     return status;
 }
 
 inline PDH_STATUS CheckPdhThrow(PDH_STATUS status)
 {
-    return CheckThrow(status, _T("pdh.dll"));
+    return CheckThrow(status, TEXT("pdh.dll"));
 }
 
 inline PDH_STATUS CheckPdhLog(PDH_STATUS status, const std::wstring& context)
 {
-    return CheckLog(status, context, _T("pdh.dll"));
+    return CheckLog(status, context, TEXT("pdh.dll"));
 }
 
 inline LONG Ignore(LONG e, std::initializer_list<LONG> ignored)
@@ -57,25 +55,25 @@ inline LONG Height(const RECT& r)
 inline LSTATUS RegGetSZ(HKEY hKey, LPCSTR lpValue, LPSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValueA(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), _T("RegGetSZ"));
+    return CheckLog(RegGetValueA(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), TEXT("RegGetSZ"));
 }
 
 inline LSTATUS RegGetSZ(HKEY hKey, LPCWSTR lpValue, LPWSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValueW(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), _T("RegGetSZ"));
+    return CheckLog(RegGetValueW(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), TEXT("RegGetSZ"));
 }
 
 inline LSTATUS RegGetMULTISZ(HKEY hKey, LPCTSTR lpValue, LPTSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_REG_MULTI_SZ, nullptr, lpData, &DataSize), _T("RegGetMULTISZ"));
+    return CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_REG_MULTI_SZ, nullptr, lpData, &DataSize), TEXT("RegGetMULTISZ"));
 }
 
 inline DWORD RegGetDWORD(HKEY hKey, LPCTSTR lpValue, DWORD Value)
 {
     DWORD DataSize = sizeof(DWORD);
-    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD, nullptr, &Value, &DataSize), _T("RegGetDWORD"));
+    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD, nullptr, &Value, &DataSize), TEXT("RegGetDWORD"));
     return Value;
 }
 
@@ -83,7 +81,7 @@ typedef unsigned __int64 QWORD;
 inline QWORD RegGetQWORD(HKEY hKey, LPCTSTR lpValue, QWORD Value)
 {
     DWORD DataSize = sizeof(QWORD);
-    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD | RRF_RT_QWORD, nullptr, &Value, &DataSize), _T("RegGetQWORD"));
+    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD | RRF_RT_QWORD, nullptr, &Value, &DataSize), TEXT("RegGetQWORD"));
     return Value;
 }
 

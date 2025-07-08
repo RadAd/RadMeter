@@ -1,9 +1,9 @@
 #include "Rad/Window.h"
 #include "Rad/Windowxx.h"
-//#include <tchar.h>
 
 #include "Utils.h"
 
+#include <tchar.h>
 #include <vector>
 #include <algorithm>
 #include <numeric>
