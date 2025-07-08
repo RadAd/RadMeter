@@ -14,6 +14,19 @@
 #include "Format.h"
 #include "resource.h"
 
+double te_interp_var(const char* expression, const te_variable* variables, int var_count, int* error) {
+    te_expr* n = te_compile(expression, variables, var_count, error);
+    double ret;
+    if (n) {
+        ret = te_eval(n);
+        te_free(n);
+    }
+    else {
+        ret = NAN;
+    }
+    return ret;
+}
+
 const UINT WM_SHELLHOOKMESSAGE = RegisterWindowMessage(TEXT("SHELLHOOK"));
 
 enum TIMER
