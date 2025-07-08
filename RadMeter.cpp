@@ -234,51 +234,51 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
     try
     {
         auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-        CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
+        CheckLog(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), TEXT("RegOpenKey"));
 
-        CheckLog(RegisterShellHookWindow(*this), _T("RegisterShellHookWindow"));
+        CheckLog(RegisterShellHookWindow(*this), TEXT("RegisterShellHookWindow"));
 
         HDC hDC = GetDC(*this);
         LOGFONT lf = {};
-        _tcscpy_s(lf.lfFaceName, _T("Segoe UI"));
-        RegGetSZ(hKey.get(), _T("FontFace"), lf.lfFaceName, ARRAYSIZE(lf.lfFaceName));
-        lf.lfHeight = -MulDiv(RegGetDWORD(hKey.get(), _T("FontSize"), 9), GetDeviceCaps(hDC, LOGPIXELSY), 72);
-        lf.lfWeight = RegGetDWORD(hKey.get(), _T("FontWeight"), FW_NORMAL);
+        _tcscpy_s(lf.lfFaceName, TEXT("Segoe UI"));
+        RegGetSZ(hKey.get(), TEXT("FontFace"), lf.lfFaceName, ARRAYSIZE(lf.lfFaceName));
+        lf.lfHeight = -MulDiv(RegGetDWORD(hKey.get(), TEXT("FontSize"), 9), GetDeviceCaps(hDC, LOGPIXELSY), 72);
+        lf.lfWeight = RegGetDWORD(hKey.get(), TEXT("FontWeight"), FW_NORMAL);
         m_hFont = CreateFontIndirect(&lf);
         ReleaseDC(*this, hDC);
         hDC = NULL;
 
-        m_Margin = RegGetDWORD(hKey.get(), _T("Margin"), 5);
+        m_Margin = RegGetDWORD(hKey.get(), TEXT("Margin"), 5);
 
         CheckPdhThrow(PdhOpenQuery(nullptr, 0, out_ptr(m_hQuery)));
 
         auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-        CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
+        CheckLog(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)), TEXT("RegOpenKey"));
 
-        TCHAR Order[1024] = _T("CPU\0");
-        RegGetMULTISZ(hKeyMeter.get(), _T("Order"), Order, ARRAYSIZE(Order));
+        TCHAR Order[1024] = TEXT("CPU\0");
+        RegGetMULTISZ(hKeyMeter.get(), TEXT("Order"), Order, ARRAYSIZE(Order));
 
-        for (TCHAR* lpMeter = Order; *lpMeter != _T('\0'); lpMeter += _tcslen(lpMeter) + 1)
+        for (TCHAR* lpMeter = Order; *lpMeter != TEXT('\0'); lpMeter += _tcslen(lpMeter) + 1)
         {
             OutputDebugString(lpMeter);
             auto hKeyCurrentMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-            CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)), _T("RegOpenKey"));
+            CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)), TEXT("RegOpenKey"));
 
-            Counter counter = { _T(""), _T("\\Processor(_Total)\\% Processor Time"), _T(""), PDH_FMT_DOUBLE, RGB(17, 125, 187), {}, 100 };
+            Counter counter = { TEXT(""), TEXT("\\Processor(_Total)\\% Processor Time"), TEXT(""), PDH_FMT_DOUBLE, RGB(17, 125, 187), {}, 100 };
 
             _tcscpy_s(counter.szName, lpMeter);
-            RegGetSZ(hKeyCurrentMeter.get(), _T("Name"), counter.szName, ARRAYSIZE(counter.szName));
-            RegGetSZ(hKeyCurrentMeter.get(), _T("Counter"), counter.szCounter, ARRAYSIZE(counter.szCounter));
-            RegGetSZ(hKeyCurrentMeter.get(), _T("Unit"), counter.szUnit, ARRAYSIZE(counter.szUnit));
-            TCHAR Format[100] = _T("double");
-            RegGetSZ(hKeyCurrentMeter.get(), _T("Format"), Format, ARRAYSIZE(Format));
-            if (_tcsicmp(Format, _T("long")) == 0)          counter.dwFormat = PDH_FMT_LONG;
-            else if (_tcsicmp(Format, _T("double")) == 0)   counter.dwFormat = PDH_FMT_DOUBLE;
+            RegGetSZ(hKeyCurrentMeter.get(), TEXT("Name"), counter.szName, ARRAYSIZE(counter.szName));
+            RegGetSZ(hKeyCurrentMeter.get(), TEXT("Counter"), counter.szCounter, ARRAYSIZE(counter.szCounter));
+            RegGetSZ(hKeyCurrentMeter.get(), TEXT("Unit"), counter.szUnit, ARRAYSIZE(counter.szUnit));
+            TCHAR Format[100] = TEXT("double");
+            RegGetSZ(hKeyCurrentMeter.get(), TEXT("Format"), Format, ARRAYSIZE(Format));
+            if (_tcsicmp(Format, TEXT("long")) == 0)          counter.dwFormat = PDH_FMT_LONG;
+            else if (_tcsicmp(Format, TEXT("double")) == 0)   counter.dwFormat = PDH_FMT_DOUBLE;
             else                                            counter.dwFormat = PDH_FMT_DOUBLE;
-            counter.m_PenColor = RegGetDWORD(hKeyCurrentMeter.get(), _T("Color"), counter.m_PenColor);
-            counter.m_BrushColor = RegGetDWORD(hKeyCurrentMeter.get(), _T("Color2"), counter.m_BrushColor);
-            counter.MaxValue = static_cast<double>(RegGetQWORD(hKeyCurrentMeter.get(), _T("Max"), static_cast<QWORD>(counter.MaxValue)));
-            counter.AutoScale = RegGetDWORD(hKeyCurrentMeter.get(), _T("AutoScale"), counter.AutoScale);
+            counter.m_PenColor = RegGetDWORD(hKeyCurrentMeter.get(), TEXT("Color"), counter.m_PenColor);
+            counter.m_BrushColor = RegGetDWORD(hKeyCurrentMeter.get(), TEXT("Color2"), counter.m_BrushColor);
+            counter.MaxValue = static_cast<double>(RegGetQWORD(hKeyCurrentMeter.get(), TEXT("Max"), static_cast<QWORD>(counter.MaxValue)));
+            counter.AutoScale = RegGetDWORD(hKeyCurrentMeter.get(), TEXT("AutoScale"), counter.AutoScale);
 
             if (counter.m_BrushColor == COLORREF{})
                 counter.m_BrushColor = MakeDarker(counter.m_PenColor, 0.5f);
@@ -292,13 +292,13 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
         if (m_hCounters.empty())
         {
             const Counter counters[] = {
-                { _T("CPU"),       _T("\\Processor(_Total)\\% Processor Time"),        _T(""),  PDH_FMT_DOUBLE, RGB(17, 125, 187) },
-                { _T("Processes"), _T("\\System\\Processes"),                          _T(""),  PDH_FMT_LONG,   MakeLighter(RGB(17, 125, 187), 0.3f), {}, 500 },
-                { _T("Memory"),    _T("\\Memory\\Available Bytes"),                    _T("B"), PDH_FMT_DOUBLE, RGB(139, 18, 174),  {}, G(16.0) },
-                { _T("Disk"),      _T("\\PhysicalDisk(_Total)\\% Disk Time"),          _T(""),  PDH_FMT_DOUBLE, RGB(77, 166, 12) },
-                { _T("Net D"),     _T("\\Network Interface(*)\\Bytes Received/sec"),   _T("B"), PDH_FMT_DOUBLE, RGB(167, 79, 1),    {}, 2000, true },
-                { _T("Net U"),     _T("\\Network Interface(*)\\Bytes Sent/sec"),       _T("B"), PDH_FMT_DOUBLE, RGB(237, 165, 130), {}, 2000, true },
-                { _T("GPU"),       _T("\\GPU Engine(*)\\Utilization Percentage"),      _T(""),  PDH_FMT_DOUBLE, RGB(172, 57, 49) },
+                { TEXT("CPU"),       TEXT("\\Processor(_Total)\\% Processor Time"),        TEXT(""),  PDH_FMT_DOUBLE, RGB(17, 125, 187) },
+                { TEXT("Processes"), TEXT("\\System\\Processes"),                          TEXT(""),  PDH_FMT_LONG,   MakeLighter(RGB(17, 125, 187), 0.3f), {}, 500 },
+                { TEXT("Memory"),    TEXT("\\Memory\\Available Bytes"),                    TEXT("B"), PDH_FMT_DOUBLE, RGB(139, 18, 174),  {}, G(16.0) },
+                { TEXT("Disk"),      TEXT("\\PhysicalDisk(_Total)\\% Disk Time"),          TEXT(""),  PDH_FMT_DOUBLE, RGB(77, 166, 12) },
+                { TEXT("Net D"),     TEXT("\\Network Interface(*)\\Bytes Received/sec"),   TEXT("B"), PDH_FMT_DOUBLE, RGB(167, 79, 1),    {}, 2000, true },
+                { TEXT("Net U"),     TEXT("\\Network Interface(*)\\Bytes Sent/sec"),       TEXT("B"), PDH_FMT_DOUBLE, RGB(237, 165, 130), {}, 2000, true },
+                { TEXT("GPU"),       TEXT("\\GPU Engine(*)\\Utilization Percentage"),      TEXT(""),  PDH_FMT_DOUBLE, RGB(172, 57, 49) },
             };
             for (Counter c : counters)
             {
@@ -314,7 +314,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
             }
         }
 
-        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), _T("PdhCollectQueryData"));
+        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), TEXT("PdhCollectQueryData"));
 
         DoPosition();
 
@@ -330,7 +330,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
 void RadMeter::OnDestroy()
 {
-    CheckLog(DeregisterShellHookWindow(*this), _T("DeregisterShellHookWindow"));
+    CheckLog(DeregisterShellHookWindow(*this), TEXT("DeregisterShellHookWindow"));
     DeleteFont(m_hFont);
     m_hFont = NULL;
     PostQuitMessage(0);
@@ -342,7 +342,7 @@ void RadMeter::OnTimer(UINT id)
     {
     case TIMER_UPDATE:
     {
-        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), _T("PdhCollectQueryData"));
+        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), TEXT("PdhCollectQueryData"));
 
         for (CounterInstance& counter : m_hCounters)
         {
@@ -465,7 +465,7 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
         InflateRect(&rchart, -1, 0);
 
         std::wstring text;
-        text = Format(_T("%s\n"), counter.style.szName);
+        text = Format(TEXT("%s\n"), counter.style.szName);
         if (!counter.m_Data.empty())
         {
             const Measure& m = counter.m_Data.back();
@@ -473,12 +473,12 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
             {
             case PDH_FMT_DOUBLE:
             {
-                TCHAR prefix = _T(' ');
+                TCHAR prefix = TEXT(' ');
                 //double mag = log10(m.Value.doubleValue);
                 double value = m.Value.doubleValue;
                 if (value > (1024 * 90 / 100))
                 {
-                    const TCHAR PrefixSet[] = _T(" KMGTPE");
+                    const TCHAR PrefixSet[] = TEXT(" KMGTPE");
                     const TCHAR* CurrentPrefix = PrefixSet;
                     while (value > (1024 * 90 / 100))
                     {
@@ -489,10 +489,10 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
                 }
                 switch (m.dwType & 0xF0000000)
                 {
-                case PERF_DISPLAY_PER_SEC:  text += Format(_T("%.1f %c%s/s"), value, prefix, counter.style.szUnit); break;
-                case PERF_DISPLAY_PERCENT:  text += Format(_T("%.0f%%"), m.Value.doubleValue); break;
-                case PERF_DISPLAY_SECONDS:  text += Format(_T("%.1f %c%s s"), value, prefix, counter.style.szUnit); break;
-                default:                    text += Format(_T("%.1f %c%s"), value, prefix, counter.style.szUnit); break;
+                case PERF_DISPLAY_PER_SEC:  text += Format(TEXT("%.1f %c%s/s"), value, prefix, counter.style.szUnit); break;
+                case PERF_DISPLAY_PERCENT:  text += Format(TEXT("%.0f%%"), m.Value.doubleValue); break;
+                case PERF_DISPLAY_SECONDS:  text += Format(TEXT("%.1f %c%s s"), value, prefix, counter.style.szUnit); break;
+                default:                    text += Format(TEXT("%.1f %c%s"), value, prefix, counter.style.szUnit); break;
                 }
             }
             break;
@@ -500,10 +500,10 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
             {
                 switch (m.dwType & 0xF0000000)
                 {
-                case PERF_DISPLAY_PER_SEC:  text += Format(_T("%d %s/s"), m.Value.longValue, counter.style.szUnit); break;
-                case PERF_DISPLAY_PERCENT:  text += Format(_T("%d%%"), m.Value.longValue); break;
-                case PERF_DISPLAY_SECONDS:  text += Format(_T("%d %s s"), m.Value.longValue, counter.style.szUnit); break;
-                default:                    text += Format(_T("%d %s"), m.Value.longValue, counter.style.szUnit); break;
+                case PERF_DISPLAY_PER_SEC:  text += Format(TEXT("%d %s/s"), m.Value.longValue, counter.style.szUnit); break;
+                case PERF_DISPLAY_PERCENT:  text += Format(TEXT("%d%%"), m.Value.longValue); break;
+                case PERF_DISPLAY_SECONDS:  text += Format(TEXT("%d %s s"), m.Value.longValue, counter.style.szUnit); break;
+                default:                    text += Format(TEXT("%d %s"), m.Value.longValue, counter.style.szUnit); break;
                 }
             }
             break;
@@ -540,12 +540,12 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
         case 53:    // Undocumented on fullscreen enter
             ++m_nFullScreenCount;
             if (m_nFullScreenCount > 0)
-                CheckLog(SetWindowPos(*this, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), _T("SetWindowPos HWND_NOTOPMOST"));
+                CheckLog(SetWindowPos(*this, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), TEXT("SetWindowPos HWND_NOTOPMOST"));
             break;
         case 54:    // Undocumented on fullscreen exit
             --m_nFullScreenCount;
             if (m_nFullScreenCount <= 0)
-                CheckLog(SetWindowPos(*this, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), _T("SetWindowPos HWND_TOPMOST"));
+                CheckLog(SetWindowPos(*this, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), TEXT("SetWindowPos HWND_TOPMOST"));
             break;
         }
     }
@@ -559,16 +559,16 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
 void RadMeter::DoPosition()
 {
     auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-    CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
+    CheckLog(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), TEXT("RegOpenKey"));
 
     auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-    CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
+    CheckLog(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)), TEXT("RegOpenKey"));
 
     const LONG style = GetWindowLong(*this, GWL_STYLE);
     const LONG exstyle = GetWindowLong(*this, GWL_EXSTYLE);
 
-    const LONG width = RegGetDWORD(hKeyMeter.get(), _T("Width"), 100);
-    const LONG height = RegGetDWORD(hKeyMeter.get(), _T("Height"), 50);
+    const LONG width = RegGetDWORD(hKeyMeter.get(), TEXT("Width"), 100);
+    const LONG height = RegGetDWORD(hKeyMeter.get(), TEXT("Height"), 50);
 
     RECT r{ 0, 0, width + 2 * m_Margin, static_cast<LONG>(m_hCounters.size()) * (height + m_Margin) + m_Margin };
     AdjustWindowRectEx(&r, style, FALSE, exstyle);
@@ -597,9 +597,9 @@ void RadMeter::DoPosition()
             lround(te_interp_var(exprx, vars, ARRAYSIZE(vars), &errorx)) - r.left,
             lround(te_interp_var(expry, vars, ARRAYSIZE(vars), &errorx)) - r.top);
         if (errorx)
-            MessageBox(*this, Format(_T("Error in x expression: %d"), errorx).c_str(), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
+            MessageBox(*this, Format(TEXT("Error in x expression: %d"), errorx).c_str(), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
         if (errory)
-            MessageBox(*this, Format(_T("Error in y expression: %d"), errory).c_str(), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
+            MessageBox(*this, Format(TEXT("Error in y expression: %d"), errory).c_str(), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
     }
 
     SetWindowPos(*this, NULL, r.left, r.top, Width(r), Height(r), SWP_NOOWNERZORDER);
