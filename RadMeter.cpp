@@ -12,7 +12,10 @@
 
 #include "tinyexpr/tinyexpr.h"
 #include "Rad/Format.h"
+#include "Rad/MemoryPlus.h"
 #include "resource.h"
+
+#define AUTO_VAR(NAME, EXPR) decltype(EXPR) NAME { EXPR }
 
 double te_interp_var(const char* expression, const te_variable* variables, int var_count, int* error) {
     te_expr* n = te_compile(expression, variables, var_count, error);
@@ -216,7 +219,7 @@ private:
     HFONT m_hFont;
     LONG m_Margin;
 
-    std::unique_ptr<PDH_HQUERY, QueryDeleter> m_hQuery;
+    AUTO_VAR(m_hQuery, MakeUniqueHandle<PDH_HQUERY>(NULL, PdhCloseQuery));
     std::vector<CounterInstance> m_hCounters;
 };
 
@@ -230,7 +233,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 {
     try
     {
-        std::unique_ptr<HKEY, KeyDeleter> hKey;
+        auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
         CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
 
         CheckLog(RegisterShellHookWindow(*this), _T("RegisterShellHookWindow"));
@@ -249,7 +252,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
         CheckPdhThrow(PdhOpenQuery(nullptr, 0, out_ptr(m_hQuery)));
 
-        std::unique_ptr<HKEY, KeyDeleter> hKeyMeter;
+        auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
         CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
 
         TCHAR Order[1024] = _T("CPU\0");
@@ -258,7 +261,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
         for (TCHAR* lpMeter = Order; *lpMeter != _T('\0'); lpMeter += _tcslen(lpMeter) + 1)
         {
             OutputDebugString(lpMeter);
-            std::unique_ptr<HKEY, KeyDeleter> hKeyCurrentMeter;
+            auto hKeyCurrentMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
             CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)), _T("RegOpenKey"));
 
             Counter counter = { _T(""), _T("\\Processor(_Total)\\% Processor Time"), _T(""), PDH_FMT_DOUBLE, RGB(17, 125, 187), {}, 100 };
@@ -555,10 +558,10 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
 
 void RadMeter::DoPosition()
 {
-    std::unique_ptr<HKEY, KeyDeleter> hKey;
+    auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
     CheckLog(RegOpenKey(HKEY_CURRENT_USER, _T("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), _T("RegOpenKey"));
 
-    std::unique_ptr<HKEY, KeyDeleter> hKeyMeter;
+    auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
     CheckLog(RegOpenKey(hKey.get(), _T("Meters"), out_ptr(hKeyMeter)), _T("RegOpenKey"));
 
     const LONG style = GetWindowLong(*this, GWL_STYLE);

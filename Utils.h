@@ -1,73 +1,11 @@
 #pragma once
 #include <Windows.h>
 #include <pdh.h>
-#include <memory>
 #include <tchar.h>
 #include <cmath>
 
 #include "Rad/Format.h"
 #include "Rad/WinError.h"
-
-struct QueryDeleter
-{
-    typedef PDH_HQUERY pointer;
-    constexpr void operator()(PDH_HQUERY arg) const
-    {
-        if (arg != NULL)
-            PdhCloseQuery(arg);
-    }
-};
-
-struct LocalDeleter
-{
-    typedef LPTSTR pointer;
-    constexpr void operator()(LPTSTR arg) const
-    {
-        if (arg != NULL)
-            LocalFree(arg);
-    }
-};
-
-struct KeyDeleter
-{
-    typedef HKEY pointer;
-    constexpr void operator()(HKEY arg) const
-    {
-        if (arg != NULL)
-            RegCloseKey(arg);
-    }
-};
-
-template <class T>
-class out_ptr
-{
-public:
-    typedef typename T::pointer pointer;
-
-    out_ptr(T& t)
-        : tt(t)
-    {
-    }
-
-    operator pointer*()
-    {
-        return &pp;
-    }
-
-    pointer* get()
-    {
-        return &pp;
-    }
-
-    ~out_ptr()
-    {
-        tt.reset(pp);
-    }
-
-private:
-    T& tt;
-    pointer pp = {};
-};
 
 inline DWORD CheckThrow(DWORD status, LPCTSTR szModule = nullptr)
 {
