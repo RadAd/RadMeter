@@ -12,3 +12,6 @@ Display meters in a widget using microsoft windows builtin [performance counters
 [![Build](https://img.shields.io/appveyor/ci/RadAd/RadMeter.svg)](https://ci.appveyor.com/project/RadAd/RadMeter)
 
 ![Screenshot](docs/RadMeter.png)
+
+## Dependencies
+[![commits-since](https://img.shields.io/github/commits-since/codeplea/tinyexpr/9907207)]([commits/master](https://github.com/codeplea/tinyexpr))
