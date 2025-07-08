@@ -14,4 +14,4 @@ Display meters in a widget using microsoft windows builtin [performance counters
 ![Screenshot](docs/RadMeter.png)
 
 ## Dependencies
-[![commits-since](https://img.shields.io/github/commits-since/codeplea/tinyexpr/9907207?label=tinyexpr%20commits%20since%209907207)]([commits/master](https://github.com/codeplea/tinyexpr))
++ [tinyexpr](https://github.com/codeplea/tinyexpr) [![commits-since](https://img.shields.io/github/commits-since/codeplea/tinyexpr/9907207)](https://github.com/codeplea/tinyexpr/commits/master/)
