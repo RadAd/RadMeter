@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "Rad/Format.h"
+#include "Rad/WinError.h"
 
 struct QueryDeleter
 {
@@ -66,36 +67,6 @@ public:
 private:
     T& tt;
     pointer pp = {};
-};
-
-struct WinError
-{
-    DWORD dwError;
-    LPCTSTR szModule;
-    std::wstring szContext;
-
-    std::wstring getMessage() const
-    {
-        HMODULE hLibrary = szModule != nullptr ? GetModuleHandle(szModule) : nullptr;
-        std::unique_ptr<WCHAR[], LocalDeleter> pMessage;
-        if (!FormatMessage(FORMAT_MESSAGE_FROM_HMODULE |
-            FORMAT_MESSAGE_ALLOCATE_BUFFER |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
-            hLibrary,
-            dwError,
-            0,
-            (LPTSTR) out_ptr(pMessage).get(),
-            0,
-            NULL))
-        {
-            return Format(_T("Format message failed with 0x%x"), GetLastError());
-        }
-        else
-        {
-            pMessage[_tcslen(pMessage.get()) - 2] = _T('\0');
-            return Format(_T("Error: %s 0x%x %s"), szContext.c_str(), dwError, pMessage.get());
-        }
-    }
 };
 
 inline DWORD CheckThrow(DWORD status, LPCTSTR szModule = nullptr)

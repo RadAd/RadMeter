@@ -97,5 +97,5 @@ _NODISCARD inline std::error_code make_win32_error_code(DWORD ec = GetLastError(
 
 //#define CHECK_LE_THROW(x) if (!(x)) throw WinError({ GetLastError(), nullptr, TEXT(#x) })
 #define CHECK_LE_THROW(x) if (!(x)) throw_win32_error(GetLastError(), TEXT(#x))
-#define CHECK_HR_THROW(x) if (FAILED(g_radloghr = x)) throw_win32_error(g_radloghr, TEXT(#x))
+#define CHECK_HR_THROW(x) if (FAILED(g_raderrorhr = x)) throw_win32_error(g_raderrorhr, TEXT(#x))
 extern thread_local HRESULT g_raderrorhr;
