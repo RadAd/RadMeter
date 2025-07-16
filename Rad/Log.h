@@ -3,16 +3,25 @@
 
 #include "SourceLocation.h"
 
+inline HRESULT ToHRESULT(BOOL b)
+{
+    return b ? S_OK : HRESULT_FROM_WIN32(GetLastError());
+}
+
 #define CHECK(x) if (!(x)) RadLog(LOG_ASSERT, TEXT(#x), SRC_LOC)
 #define CHECK_RET(x,r) if (!(x)) { RadLog(LOG_ASSERT, TEXT(#x), SRC_LOC); return (r); }
 
 #ifdef __cplusplus
 #include "WinError.h"
+#if 0
 #define CHECK_LE(x) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); }
 #define CHECK_LE_RET(x, r) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); return (r); }
-#define CHECK_HR(x) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, TEXT(#x)), SRC_LOC)
-#define CHECK_HR_RET(x, r) if (FAILED(g_radloghr = x)) { RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, TEXT(#x)), SRC_LOC); return (r); }
-extern thread_local HRESULT g_radloghr;
+#else
+#define CHECK_LE(x) CheckHr(ToHRESULT(x), nullptr, TEXT(#x), SRC_LOC)
+#define CHECK_LE_RET(x, r) if (FAILED(CheckHr(ToHRESULT(x), nullptr, TEXT(#x), SRC_LOC))) return (r);
+#endif
+#define CHECK_HR(x) CheckHr(x, nullptr, TEXT(#x), SRC_LOC)
+#define CHECK_HR_RET(x, r) if (FAILED(CheckHr(x, nullptr, TEXT(#x), SRC_LOC))) return (r);
 #endif
 
 enum LogLevel {
@@ -46,4 +55,20 @@ inline void RadLog(LogLevel l, const std::wstring& msg, SrcLocW src) { RadLogW(l
 #else
 #define RadLog RadLogA
 #endif
+#endif
+
+#ifdef __cplusplus
+inline DWORD CheckHr(const HRESULT hr, LPCSTR szModule, LPCSTR szContext, const SrcLocA src)
+{
+    if (FAILED(hr))
+        RadLog(LOG_ASSERT, WinError::getMessage(hr, szModule, szContext), src);
+    return hr;
+}
+
+inline DWORD CheckHr(const HRESULT hr, LPCWSTR szModule, LPCWSTR szContext, const SrcLocW src)
+{
+    if (FAILED(hr))
+        RadLog(LOG_ASSERT, WinError::getMessage(hr, szModule, szContext), src);
+    return hr;
+}
 #endif

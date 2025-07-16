@@ -6,8 +6,8 @@
 #include "Rad/Log.h"
 #include "Rad/WinError.h"
 
-#define CHECK_HR_PDH(x) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, TEXT("pdh.dll"), TEXT(#x)), SRC_LOC)
-#define CHECK_HR_MSG_PDH(x, m) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, TEXT("pdh.dll"), (m)), SRC_LOC)
+#define CHECK_HR_PDH(x) CheckHr(x, TEXT("pdh.dll"), TEXT(#x), SRC_LOC)
+#define CHECK_HR_MSG_PDH(x, m) CheckHr(x, TEXT("pdh.dll"), m, SRC_LOC)
 
 #include <system_error>
 
@@ -26,22 +26,6 @@ namespace std
     struct is_error_code_enum<pdh_error_code> : std::true_type {};
 }
 
-class pdh_error_category : public std::error_category
-{
-public:
-    constexpr pdh_error_category() noexcept : std::error_category(_Generic_addr) {}
-
-    _NODISCARD const char* name() const noexcept override
-    {
-        return "pdh";
-    }
-
-    _NODISCARD std::string message(int errcode) const override
-    {
-        return WinError::getMessage(PDH_STATUS(errcode), "pdh.dll", LPCSTR(nullptr));
-    }
-};
-
 _NODISCARD std::error_category& pdh_category() noexcept;
 
 _NODISCARD inline std::error_code make_error_code(const pdh_error_code & wec)
@@ -49,12 +33,12 @@ _NODISCARD inline std::error_code make_error_code(const pdh_error_code & wec)
     return std::error_code(static_cast<int>(wec.error), pdh_category());
 }
 
-_NODISCARD inline std::error_code make_pdh_error_code(PDH_STATUS ec = GetLastError()) noexcept
+_NODISCARD inline std::error_code make_pdh_error_code(PDH_STATUS ec) noexcept
 {
     return std::error_code(pdh_error_code(ec));
 }
 
-[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec = GetLastError())
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec)
 {
     throw std::system_error(pdh_error_code(ec));
 }
@@ -79,15 +63,7 @@ _NODISCARD inline std::error_code make_pdh_error_code(PDH_STATUS ec = GetLastErr
     throw_pdh_error(ec, w2a(msg).c_str());
 }
 
-#define CHECK_HR_PDH_THROW(x) if (FAILED(g_raderrorhr = x)) throw_pdh_error(g_raderrorhr, TEXT(#x))
-extern thread_local HRESULT g_raderrorhr;
-
-inline DWORD CheckLog(DWORD status, const std::wstring& context, LPCTSTR szModule = nullptr)
-{
-    if (FAILED(status))
-        RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, context.c_str()), SRC_LOC);
-    return status;
-}
+#define CHECK_HR_PDH_THROW(x) CheckHrThrow(pdh_error_code(x), TEXT(#x))
 
 inline LONG Ignore(LONG e, std::initializer_list<LONG> ignored)
 {
@@ -112,25 +88,25 @@ inline LONG Height(const RECT& r)
 inline LSTATUS RegGetSZ(HKEY hKey, LPCSTR lpValue, LPSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValueA(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), TEXT("RegGetSZ"));
+    return CHECK_HR(RegGetValueA(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize));
 }
 
 inline LSTATUS RegGetSZ(HKEY hKey, LPCWSTR lpValue, LPWSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValueW(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize), TEXT("RegGetSZ"));
+    return CHECK_HR(RegGetValueW(hKey, nullptr, lpValue, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ, nullptr, lpData, &DataSize));
 }
 
 inline LSTATUS RegGetMULTISZ(HKEY hKey, LPCTSTR lpValue, LPTSTR lpData, DWORD DataSize)
 {
     DataSize *= sizeof(TCHAR);
-    return CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_REG_MULTI_SZ, nullptr, lpData, &DataSize), TEXT("RegGetMULTISZ"));
+    return CHECK_HR(RegGetValue(hKey, nullptr, lpValue, RRF_RT_REG_MULTI_SZ, nullptr, lpData, &DataSize));
 }
 
 inline DWORD RegGetDWORD(HKEY hKey, LPCTSTR lpValue, DWORD Value)
 {
     DWORD DataSize = sizeof(DWORD);
-    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD, nullptr, &Value, &DataSize), TEXT("RegGetDWORD"));
+    CHECK_HR(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD, nullptr, &Value, &DataSize));
     return Value;
 }
 
@@ -138,7 +114,7 @@ typedef unsigned __int64 QWORD;
 inline QWORD RegGetQWORD(HKEY hKey, LPCTSTR lpValue, QWORD Value)
 {
     DWORD DataSize = sizeof(QWORD);
-    CheckLog(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD | RRF_RT_QWORD, nullptr, &Value, &DataSize), TEXT("RegGetQWORD"));
+    CHECK_HR(RegGetValue(hKey, nullptr, lpValue, RRF_RT_DWORD | RRF_RT_QWORD, nullptr, &Value, &DataSize));
     return Value;
 }
 

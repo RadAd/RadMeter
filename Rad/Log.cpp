@@ -4,8 +4,6 @@
 
 #include "Format.h"
 
-thread_local HRESULT g_radloghr = ERROR_SUCCESS;
-
 typedef void (*LogFA)(LogLevel l, const char* msg, SrcLocA src);
 typedef void (*LogFW)(LogLevel l, const wchar_t* msg, SrcLocW src);
 
