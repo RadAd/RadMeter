@@ -3,33 +3,90 @@
 #include <pdh.h>
 #include <cmath>
 
+#include "Rad/Log.h"
 #include "Rad/WinError.h"
 
-inline DWORD CheckThrow(DWORD status, LPCTSTR szModule = nullptr)
+#define CHECK_HR_PDH(x) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, TEXT("pdh.dll"), TEXT(#x)), SRC_LOC)
+#define CHECK_HR_MSG_PDH(x, m) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, TEXT("pdh.dll"), (m)), SRC_LOC)
+
+#include <system_error>
+
+// bug in std::system_category().message() in MSVC v143
+// See https://github.com/microsoft/STL/issues/3254
+
+struct pdh_error_code
 {
-    if (FAILED(status))
-        throw WinError({ status, szModule });
-    return status;
+    explicit pdh_error_code(PDH_STATUS e) noexcept : error(e) {}
+    PDH_STATUS error;
+};
+
+namespace std
+{
+    template <>
+    struct is_error_code_enum<pdh_error_code> : std::true_type {};
 }
+
+class pdh_error_category : public std::error_category
+{
+public:
+    constexpr pdh_error_category() noexcept : std::error_category(_Generic_addr) {}
+
+    _NODISCARD const char* name() const noexcept override
+    {
+        return "pdh";
+    }
+
+    _NODISCARD std::string message(int errcode) const override
+    {
+        return WinError::getMessage(PDH_STATUS(errcode), "pdh.dll", LPCSTR(nullptr));
+    }
+};
+
+_NODISCARD std::error_category& pdh_category() noexcept;
+
+_NODISCARD inline std::error_code make_error_code(const pdh_error_code & wec)
+{
+    return std::error_code(static_cast<int>(wec.error), pdh_category());
+}
+
+_NODISCARD inline std::error_code make_pdh_error_code(PDH_STATUS ec = GetLastError()) noexcept
+{
+    return std::error_code(pdh_error_code(ec));
+}
+
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec = GetLastError())
+{
+    throw std::system_error(pdh_error_code(ec));
+}
+
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec, const std::string & msg)
+{
+    throw std::system_error(pdh_error_code(ec), msg);
+}
+
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec, const std::wstring & msg)
+{
+    throw_pdh_error(ec, w2a(msg));
+}
+
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec, const char* msg)
+{
+    throw std::system_error(pdh_error_code(ec), msg);
+}
+
+[[noreturn]] inline void throw_pdh_error(PDH_STATUS ec, const wchar_t* msg)
+{
+    throw_pdh_error(ec, w2a(msg).c_str());
+}
+
+#define CHECK_HR_PDH_THROW(x) if (FAILED(g_raderrorhr = x)) throw_pdh_error(g_raderrorhr, TEXT(#x))
+extern thread_local HRESULT g_raderrorhr;
 
 inline DWORD CheckLog(DWORD status, const std::wstring& context, LPCTSTR szModule = nullptr)
 {
     if (FAILED(status))
-    {
-        WinError e({ status, szModule });
-        OutputDebugString((context + TEXT(": ") + e.getMessage() + TEXT('\n')).c_str());
-    }
+        RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, context.c_str()), SRC_LOC);
     return status;
-}
-
-inline PDH_STATUS CheckPdhThrow(PDH_STATUS status)
-{
-    return CheckThrow(status, TEXT("pdh.dll"));
-}
-
-inline PDH_STATUS CheckPdhLog(PDH_STATUS status, const std::wstring& context)
-{
-    return CheckLog(status, context, TEXT("pdh.dll"));
 }
 
 inline LONG Ignore(LONG e, std::initializer_list<LONG> ignored)

@@ -89,6 +89,7 @@
     <ClCompile Include="Rad\Window.cpp" />
     <ClCompile Include="Rad\WinError.cpp" />
     <ClCompile Include="tinyexpr\tinyexpr.c" />
+    <ClCompile Include="Utils.cpp" />
     <ClCompile Include="WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>

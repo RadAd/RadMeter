@@ -1,5 +1,6 @@
 #include "Rad/Window.h"
 #include "Rad/Windowxx.h"
+#include "Rad/Log.h"
 
 #include "Utils.h"
 
@@ -231,9 +232,9 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
     try
     {
         auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-        CheckLog(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), TEXT("RegOpenKey"));
+        CHECK_HR(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)));
 
-        CheckLog(RegisterShellHookWindow(*this), TEXT("RegisterShellHookWindow"));
+        CHECK_LE(RegisterShellHookWindow(*this));
 
         HDC hDC = GetDC(*this);
         LOGFONT lf = {};
@@ -247,10 +248,10 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
         m_Margin = RegGetDWORD(hKey.get(), TEXT("Margin"), 5);
 
-        CheckPdhThrow(PdhOpenQuery(nullptr, 0, out_ptr(m_hQuery)));
+        CHECK_HR_PDH_THROW(PdhOpenQuery(nullptr, 0, out_ptr(m_hQuery)));
 
         auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-        CheckLog(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)), TEXT("RegOpenKey"));
+        CHECK_HR(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)));
 
         TCHAR Order[1024] = TEXT("CPU\0");
         RegGetMULTISZ(hKeyMeter.get(), TEXT("Order"), Order, ARRAYSIZE(Order));
@@ -259,7 +260,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
         {
             OutputDebugString(lpMeter);
             auto hKeyCurrentMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-            CheckLog(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)), TEXT("RegOpenKey"));
+            CHECK_HR(RegOpenKey(hKeyMeter.get(), lpMeter, out_ptr(hKeyCurrentMeter)));
 
             Counter counter = { TEXT(""), TEXT("\\Processor(_Total)\\% Processor Time"), TEXT(""), PDH_FMT_DOUBLE, RGB(17, 125, 187), {}, 100 };
 
@@ -281,7 +282,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
                 counter.m_BrushColor = MakeDarker(counter.m_PenColor, 0.5f);
 
             PDH_HCOUNTER hCounter = NULL;
-            CheckPdhThrow(PdhAddEnglishCounter(m_hQuery.get(), counter.szCounter, 0, &hCounter));
+            CHECK_HR_PDH_THROW(PdhAddEnglishCounter(m_hQuery.get(), counter.szCounter, 0, &hCounter));
 
             m_hCounters.push_back(CounterInstance({ counter, hCounter }));
         }
@@ -305,13 +306,13 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
                     c.MaxValue = 100;
 
                 PDH_HCOUNTER hCounter = NULL;
-                CheckPdhThrow(PdhAddEnglishCounter(m_hQuery.get(), c.szCounter, 0, &hCounter));
+                CHECK_HR_PDH_THROW(PdhAddEnglishCounter(m_hQuery.get(), c.szCounter, 0, &hCounter));
 
                 m_hCounters.push_back(CounterInstance({ c, hCounter }));
             }
         }
 
-        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), TEXT("PdhCollectQueryData"));
+        CHECK_HR_PDH(PdhCollectQueryData(m_hQuery.get()));
 
         DoPosition();
 
@@ -327,7 +328,7 @@ BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 
 void RadMeter::OnDestroy()
 {
-    CheckLog(DeregisterShellHookWindow(*this), TEXT("DeregisterShellHookWindow"));
+    CHECK_LE(DeregisterShellHookWindow(*this));
     DeleteFont(m_hFont);
     m_hFont = NULL;
     PostQuitMessage(0);
@@ -339,16 +340,16 @@ void RadMeter::OnTimer(UINT id)
     {
     case TIMER_UPDATE:
     {
-        CheckPdhLog(PdhCollectQueryData(m_hQuery.get()), TEXT("PdhCollectQueryData"));
+        CHECK_HR_PDH(PdhCollectQueryData(m_hQuery.get()));
 
         for (CounterInstance& counter : m_hCounters)
         {
             Measure m = {};
-            CheckPdhLog(PdhGetFormattedCounterValue(counter.m_hCounter, counter.style.dwFormat, &m.dwType, &m.Value), counter.style.szCounter);
+            CHECK_HR_MSG_PDH(Ignore(PdhGetFormattedCounterValue(counter.m_hCounter, counter.style.dwFormat, &m.dwType, &m.Value), { PDH_STATUS(PDH_CALC_NEGATIVE_VALUE) }), counter.style.szCounter);
 
             DWORD dwBufferSize = 0;
             DWORD dwItemCount = 0;
-            CheckPdhLog(Ignore(PdhGetFormattedCounterArray(counter.m_hCounter, counter.style.dwFormat, &dwBufferSize, &dwItemCount, nullptr), { PDH_STATUS(PDH_MORE_DATA) }), counter.style.szCounter);
+            CHECK_HR_MSG_PDH(Ignore(PdhGetFormattedCounterArray(counter.m_hCounter, counter.style.dwFormat, &dwBufferSize, &dwItemCount, nullptr), { PDH_STATUS(PDH_MORE_DATA) }), counter.style.szCounter);
             //assert(dwItemCount * sizeof(PDH_FMT_COUNTERVALUE) == dwBufferSize);
 
             if (dwItemCount > 1)
@@ -541,12 +542,12 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
         case 53:    // Undocumented on fullscreen enter
             ++m_nFullScreenCount;
             if (m_nFullScreenCount > 0)
-                CheckLog(SetWindowPos(*this, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), TEXT("SetWindowPos HWND_NOTOPMOST"));
+                CHECK_LE(SetWindowPos(*this, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE));
             break;
         case 54:    // Undocumented on fullscreen exit
             --m_nFullScreenCount;
             if (m_nFullScreenCount <= 0)
-                CheckLog(SetWindowPos(*this, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE), TEXT("SetWindowPos HWND_TOPMOST"));
+                CHECK_LE(SetWindowPos(*this, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE));
             break;
         }
     }
@@ -560,10 +561,10 @@ LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPAR
 void RadMeter::DoPosition()
 {
     auto hKey = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-    CheckLog(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)), TEXT("RegOpenKey"));
+    CHECK_HR(RegOpenKey(HKEY_CURRENT_USER, TEXT("SOFTWARE\\RadSoft\\RadMeter"), out_ptr(hKey)));
 
     auto hKeyMeter = MakeUniqueHandle<HKEY>(NULL, RegCloseKey);
-    CheckLog(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)), TEXT("RegOpenKey"));
+    CHECK_HR(RegOpenKey(hKey.get(), TEXT("Meters"), out_ptr(hKeyMeter)));
 
     const LONG style = GetWindowLong(*this, GWL_STYLE);
     const LONG exstyle = GetWindowLong(*this, GWL_EXSTYLE);
@@ -608,18 +609,14 @@ void RadMeter::DoPosition()
 
 bool Run(_In_ const LPCTSTR lpCmdLine, _In_ const int nShowCmd)
 {
-    if (Register<RadMeter::Class>() == 0)
-    {
-        MessageBox(NULL, TEXT("Error registering window class"), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
-        return false;
-    }
-    RadMeter* prw = RadMeter::Create();
-    if (prw == nullptr)
-    {
-        MessageBox(NULL, TEXT("Error creating root window"), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
-        return false;
-    }
+    RadLogInitWnd(NULL, "RadMeter", L"RadMeter");
 
+    CHECK_LE_RET(Register<RadMeter::Class>(), false);
+
+    RadMeter* prw = RadMeter::Create();
+    CHECK_LE_RET(prw != nullptr, false);
+
+    RadLogInitWnd(*prw, nullptr, nullptr);
     ShowWindow(*prw, nShowCmd);
     return true;
 }
