@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Convert.h"
+#include "Log.h"
 
 #ifdef _UNICODE
 #define tstring wstring
@@ -130,22 +131,53 @@ _NODISCARD inline std::error_code make_hr_error_code(HRESULT ec) noexcept
     throw_hr_error(ec, w2a(msg).c_str());
 }
 
-inline void CheckHrThrow(const HRESULT hr, const char* msg)
+template <typename T>
+inline void CheckHrThrow(const T ec, const char* msg)
 {
-    if (FAILED(hr))
-        throw_hr_error(hr, msg);
+    if (FAILED(ec.error))
+        throw std::system_error(ec, msg);
 }
 
-inline void CheckHrThrow(const HRESULT hr, const wchar_t* msg)
+template <typename T>
+inline void CheckHrThrow(const T ec, const wchar_t* msg)
+{
+    if (FAILED(ec.error))
+        throw std::system_error(ec, w2a(msg).c_str());
+}
+
+inline DWORD CheckHr(const HRESULT hr, LPCSTR szModule, LPCSTR szContext, const SrcLocA src)
 {
     if (FAILED(hr))
-        throw_hr_error(hr, msg);
+        RadLog(LOG_ASSERT, WinError::getMessage(hr, szModule, szContext), src);
+    return hr;
 }
+
+inline DWORD CheckHr(const HRESULT hr, LPCWSTR szModule, LPCWSTR szContext, const SrcLocW src)
+{
+    if (FAILED(hr))
+        RadLog(LOG_ASSERT, WinError::getMessage(hr, szModule, szContext), src);
+    return hr;
+}
+
+inline HRESULT ToHRESULT(BOOL b)
+{
+    return b ? S_OK : HRESULT_FROM_WIN32(GetLastError());
+}
+
+#if 0
+#define CHECK_LE(x) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); }
+#define CHECK_LE_RET(x, r) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); return (r); }
+#else
+#define CHECK_LE(x) CheckHr(ToHRESULT(x), nullptr, TEXT(#x), SRC_LOC)
+#define CHECK_LE_RET(x, r) if (FAILED(CheckHr(ToHRESULT(x), nullptr, TEXT(#x), SRC_LOC))) return (r);
+#endif
+#define CHECK_HR(x) CheckHr(x, nullptr, TEXT(#x), SRC_LOC)
+#define CHECK_HR_RET(x, r) if (FAILED(CheckHr(x, nullptr, TEXT(#x), SRC_LOC))) return (r);
 
 //#define CHECK_LE_THROW(x) if (!(x)) throw WinError({ GetLastError(), nullptr, TEXT(#x) })
 #if 0
 #define CHECK_LE_THROW(x) if (!(x)) throw_win32_error(GetLastError(), TEXT(#x))
 #else
-#define CHECK_LE_THROW(x) CheckHrThrow(ToHRESULT(x), TEXT(#x))
+#define CHECK_LE_THROW(x) CheckHrThrow(hr_error_code(ToHRESULT(x)), TEXT(#x))
 #endif
-#define CHECK_HR_THROW(x) CheckHrThrow(x, TEXT(#x))
+#define CHECK_HR_THROW(x) CheckHrThrow(hr_error_code(x), TEXT(#x))

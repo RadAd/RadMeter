@@ -1,5 +1,5 @@
 #include "Dialog.h"
-#include "Log.h"
+#include "WinError.h"
 
 #include <set>
 
