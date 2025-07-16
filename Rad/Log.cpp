@@ -135,8 +135,10 @@ extern "C" {
     void RadLogInitWnd(HWND hWndLog, LPCSTR strLogCaptionA, LPCWSTR strLogCaptionW)
     {
         g_hWndLog = hWndLog;
-        g_strLogCaptionA = strLogCaptionA;
-        g_strLogCaptionW = strLogCaptionW;
+        if (strLogCaptionA)
+            g_strLogCaptionA = strLogCaptionA;
+        if (strLogCaptionW)
+            g_strLogCaptionW = strLogCaptionW;
     }
 
     void RadLogA(LogLevel l, const char* msg, SrcLocA src)

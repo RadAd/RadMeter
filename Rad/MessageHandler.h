@@ -25,11 +25,9 @@ protected:
         _ASSERTE(m_hWnd == NULL);
         m_hWnd = hWnd;
     }
-    void Delete() { m_delete = true; }
 
 private:
     HWND m_hWnd = NULL;
-    bool m_delete = false;
 
     struct Message
     {

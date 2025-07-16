@@ -8,8 +8,8 @@
 
 #ifdef __cplusplus
 #include "WinError.h"
-#define CHECK_LE(x) if (!(x)) RadLog(LOG_ASSERT, WinError::getMessage(GetLastError(), nullptr, TEXT(#x)), SRC_LOC)
-#define CHECK_LE_RET(x, r) if (!(x)) { RadLog(LOG_ASSERT, WinError::getMessage(GetLastError(), nullptr, TEXT(#x)), SRC_LOC); return (r); }
+#define CHECK_LE(x) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); }
+#define CHECK_LE_RET(x, r) if (!(x)) { const DWORD err = GetLastError(); RadLog(LOG_ASSERT, WinError::getMessage(err, nullptr, TEXT(#x)), SRC_LOC); SetLastError(err); return (r); }
 #define CHECK_HR(x) if (FAILED(g_radloghr = x)) RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, TEXT(#x)), SRC_LOC)
 #define CHECK_HR_RET(x, r) if (FAILED(g_radloghr = x)) { RadLog(LOG_ASSERT, WinError::getMessage(g_radloghr, nullptr, TEXT(#x)), SRC_LOC); return (r); }
 extern thread_local HRESULT g_radloghr;

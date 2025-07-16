@@ -25,9 +25,6 @@ LRESULT MessageHandler::ProcessMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     _ASSERTE(m_msg == &m);
     std::exchange(m_msg, pMsg);
 
-    if (m_delete && m_msg == nullptr)
-        delete this;
-
     bHandled = m.m_bHandled;
     return ret;
 }

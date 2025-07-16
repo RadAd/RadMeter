@@ -52,26 +52,28 @@ template <class T> inline T G(T v) { return M(v) * 1024; }
 
 class Widget : public Window
 {
-    friend WindowManager<Widget>;
-
 public:
-    static ATOM Register() { return WindowManager<Widget>::Register(); }
+    friend WindowManager<Widget>;
+    struct Class
+    {
+        static LPCTSTR ClassName() { return TEXT("RadWidget"); }
+        static void GetWndClass(WNDCLASS& wc)
+        {
+            //MainClass::GetWndClass(wc);
+            wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+            //wc.hbrBackground = GetStockBrush(BLACK_BRUSH);
+            wc.hbrBackground = CreateSolidBrush(RGB(24, 24, 24));
+            wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_RADMETER));
+        }
+        static void GetCreateWindow(CREATESTRUCT& cs)
+        {
+            //MainClass::GetCreateWindow(cs);
+            cs.style = WS_POPUPWINDOW /*| WS_THICKFRAME*/;
+            cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
+        }
+    };
 
 protected:
-    static void GetCreateWindow(CREATESTRUCT& cs)
-    {
-        Window::GetCreateWindow(cs);
-        cs.style = WS_POPUPWINDOW /*| WS_THICKFRAME*/;
-        cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
-    }
-    static void GetWndClass(WNDCLASS& wc)
-    {
-        Window::GetWndClass(wc);
-        //wc.hbrBackground = GetStockBrush(BLACK_BRUSH);
-        wc.hbrBackground = CreateSolidBrush(RGB(24, 24, 24));
-        wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_RADMETER));
-    }
-
     void OnMouseMove(int x, int y, UINT keyFlags);
     void OnLButtonDown(int x, int y, UINT keyFlags);
     void OnRButtonDown(int x, int y, UINT keyFlags);
@@ -93,8 +95,6 @@ protected:
 
         return ret;
     }
-
-    static LPCTSTR ClassName() { return TEXT("RadWidget"); }
 
 private:
     bool m_bHidden = false;
@@ -165,6 +165,10 @@ void Widget::OnTimer(UINT id)
         }
     }
     break;
+
+    default:
+        SetHandled(false);
+        break;
     }
 }
 
@@ -198,10 +202,9 @@ class RadMeter : public Widget
     friend WindowManager<RadMeter>;
 
 public:
-    static RadMeter* Create() { return WindowManager<RadMeter>::Create(); }
+    static RadMeter* Create() { return WindowManager<RadMeter>::Create(NULL, TEXT("RadMeter")); }
 
 protected:
-    static void GetCreateWindow(CREATESTRUCT& cs);
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
 private:
@@ -222,12 +225,6 @@ private:
     AUTO_VAR(m_hQuery, MakeUniqueHandle<PDH_HQUERY>(NULL, PdhCloseQuery));
     std::vector<CounterInstance> m_hCounters;
 };
-
-void RadMeter::GetCreateWindow(CREATESTRUCT& cs)
-{
-    Widget::GetCreateWindow(cs);
-    cs.lpszName = TEXT("RadMeter");
-}
 
 BOOL RadMeter::OnCreate(const LPCREATESTRUCT lpCreateStruct)
 {
@@ -393,6 +390,10 @@ void RadMeter::OnTimer(UINT id)
         InvalidateRect(*this, nullptr, TRUE);
     }
     break;
+
+    default:
+        SetHandled(false);
+        break;
     }
 }
 
@@ -607,7 +608,7 @@ void RadMeter::DoPosition()
 
 bool Run(_In_ const LPCTSTR lpCmdLine, _In_ const int nShowCmd)
 {
-    if (RadMeter::Register() == 0)
+    if (Register<RadMeter::Class>() == 0)
     {
         MessageBox(NULL, TEXT("Error registering window class"), TEXT("RadMeter"), MB_ICONERROR | MB_OK);
         return false;
