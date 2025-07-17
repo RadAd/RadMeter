@@ -53,8 +53,7 @@ template <class T> inline T G(T v) { return M(v) * 1024; }
 
 class Widget : public Window
 {
-public:
-    friend WindowManager<Widget>;
+protected:
     struct Class
     {
         static LPCTSTR ClassName() { return TEXT("RadWidget"); }
@@ -73,6 +72,9 @@ public:
             cs.dwExStyle = WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
         }
     };
+
+public:
+    static ATOM Register() { return ::Register<Class>(); }
 
 protected:
     void OnMouseMove(int x, int y, UINT keyFlags);
@@ -611,7 +613,7 @@ bool Run(_In_ const LPCTSTR lpCmdLine, _In_ const int nShowCmd)
 {
     RadLogInitWnd(NULL, "RadMeter", L"RadMeter");
 
-    CHECK_LE_RET(Register<RadMeter::Class>(), false);
+    CHECK_LE_RET(Widget::Register(), false);
 
     RadMeter* prw = RadMeter::Create();
     CHECK_LE_RET(prw != nullptr, false);
