@@ -62,6 +62,7 @@
     <ClInclude Include="Rad\WinError.h">
       <Filter>Rad</Filter>
     </ClInclude>
+    <ClInclude Include="WinMainSetup.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="TinyExpr">

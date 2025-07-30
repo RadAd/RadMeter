@@ -107,6 +107,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="tinyexpr\tinyexpr.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="WinMainSetup.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="RadMeter.ico" />
