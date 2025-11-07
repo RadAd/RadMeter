@@ -16,7 +16,34 @@ auto MakeUniqueHandle(P p, F f)
 }
 
 inline auto AutoGetDC(HWND hWnd) { return MakeUniqueHandle(GetDC(hWnd), [hWnd](HDC hDC) { ReleaseDC(hWnd, hDC); }); }
-inline auto AutoSelectObject(HDC hDC, HGDIOBJ hObj) { return MakeUniqueHandle(SelectObject(hDC, hObj), [hDC](HGDIOBJ hObj) { SelectObject(hDC, hObj); }); }
+//inline auto AutoSelectObject(HDC hDC, HGDIOBJ hObj) { return MakeUniqueHandle(SelectObject(hDC, hObj), [hDC](HGDIOBJ hObj) { SelectObject(hDC, hObj); }); }
+
+template <class T, class F>
+class ValueDeleter
+{
+public:
+    ValueDeleter(F f) : func(f) {}
+    typedef T pointer;
+    void operator()(T val) noexcept
+    {
+        func(val);
+    }
+
+private:
+    F func;
+};
+
+template <class P, class F>
+auto MakeUniqueValue(P p, F f)
+{
+    return std::unique_ptr<P, ValueDeleter<P, F>>(p, ValueDeleter<P, F>(f));
+}
+
+template <class T, class U, class F>
+inline auto AutoReset(F f, T t, U u)
+{
+    return MakeUniqueValue(f(t, u), [f, t](U u) { f(t, u); });
+}
 
 template<class P> auto AutoGlobalLock(HGLOBAL hGlobal) { return MakeUniqueHandle(static_cast<P>(GlobalLock(hGlobal)), [hGlobal](P) { GlobalUnlock(hGlobal); }); }
 

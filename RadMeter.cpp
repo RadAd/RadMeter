@@ -409,12 +409,12 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
 {
     HDC hDC = pps->hdc;
 
-    HPEN hOldPen = SelectPen(hDC, GetStockPen(DC_PEN));
-    HBRUSH hOldBrush = SelectBrush(hDC, GetStockBrush(DC_BRUSH));
+    const auto pen = AutoReset<HDC, HGDIOBJ>(SelectObject, hDC, GetStockPen(DC_PEN)); // SelectPen
+    const auto brush = AutoReset<HDC, HGDIOBJ>(SelectObject, hDC, GetStockBrush(DC_BRUSH)); // SelectBrush
 
-    HFONT hOldFont = SelectFont(hDC, m_hFont);
-    SetBkMode(hDC, TRANSPARENT);
-    SetTextColor(hDC, RGB(255, 255, 255));
+    const auto font = AutoReset<HDC, HGDIOBJ>(SelectObject, hDC, m_hFont); // SelectFont
+    const auto bkmode = AutoReset(SetBkMode, hDC, TRANSPARENT);
+    const auto textcolor = AutoReset(SetTextColor, hDC, RGB(255, 255, 255));
 
     RECT client;
     GetClientRect(*this, &client);
@@ -519,10 +519,6 @@ void RadMeter::OnDraw(const PAINTSTRUCT* pps) const
 
         OffsetRect(&rchart, 0, height);
     }
-
-    SelectPen(hDC, hOldPen);
-    SelectBrush(hDC, hOldBrush);
-    SelectFont(hDC, hOldFont);
 }
 
 LRESULT RadMeter::HandleMessage(const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
